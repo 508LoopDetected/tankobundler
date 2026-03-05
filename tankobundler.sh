@@ -24,6 +24,7 @@ if [[ $# -eq 0 ]]; then
     exit 1
 fi
 
+ORIGDIR="$(pwd)"
 TMPDIR=$(mktemp -d)
 trap "rm -rf $TMPDIR" EXIT
 
@@ -38,9 +39,9 @@ extract_archive() {
     esac
 }
 
-for VOLDIR in "$@"; do
-    # Strip trailing slash
-    VOLDIR="${VOLDIR%/}"
+for VOLDIR_ARG in "$@"; do
+    # Strip trailing slash and resolve to absolute path
+    VOLDIR="$(cd "$(dirname "${VOLDIR_ARG%/}")" && pwd)/$(basename "${VOLDIR_ARG%/}")"
 
     if [[ ! -d "$VOLDIR" ]]; then
         echo "ERROR: Not a directory: $VOLDIR"
@@ -99,7 +100,7 @@ for VOLDIR in "$@"; do
 
     cd "$WORKDIR"
     find . -maxdepth 1 -type f -print0 | sort -z | xargs -0 zip -q -0 "$OUTFILE"
-    cd /
+    cd "$ORIGDIR"
 
     echo "$VOLNAME: $PAGE pages from $ARCHIVE_COUNT archives -> $(basename "$OUTFILE")"
     rm -rf "$WORKDIR"
