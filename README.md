@@ -16,15 +16,15 @@ Each volume needs its own folder containing:
 2. **Cover image(s)** (optional) — any loose image file (jpg, png, webp) in the folder
 
 ```
-Chainsaw Man - Volume 24/
-├── Volume_24.png                          # cover image (placed first)
-├── Chainsaw Man 223 (2025) (Digital).cbz  # chapter archives
-├── Chainsaw Man 224 (2025) (Digital).cbz
-└── Chainsaw Man 225 (2025) (Digital).cbz
+Chainsaw Man v24/
+├── cover.png                                      # cover image (placed first)
+├── Chainsaw Man 223 (2025) (Digital) (1r0n).cbz   # chapter archives
+├── Chainsaw Man 224 (2025) (Digital) (1r0n).cbz
+└── Chainsaw Man 225 (2025) (Digital) (1r0n).cbz
 ```
 
 ```
-Transmetropolitan - Volume 03/
+Transmetropolitan v03/
 ├── cover.jpg                              # cover image (placed first)
 ├── Transmetropolitan 013.cbr              # issue archives
 ├── Transmetropolitan 014.cbr
@@ -40,20 +40,20 @@ Archives and images are processed in alphabetical order. Cover images always com
 
 ```bash
 # Single volume
-./tankobundler.sh "Chainsaw Man - Volume 24"
+./tankobundler.sh "Chainsaw Man v24"
 
 # Multiple volumes
-./tankobundler.sh "Transmetropolitan - Volume 03" "Transmetropolitan - Volume 04"
+./tankobundler.sh "Transmetropolitan v03" "Transmetropolitan v04"
 
 # All subfolders
 ./tankobundler.sh */
 ```
 
-The output CBZ is named after the folder and placed alongside it:
+The output CBZ is named after the folder, with tags (e.g. `(Digital)`, group name) automatically extracted from the source archive filenames and appended:
 
 ```
-Transmetropolitan - Volume 03/    # input folder
-Transmetropolitan - Volume 03.cbz # output file
+Chainsaw Man v24/                          # input folder
+Chainsaw Man v24 (Digital) (1r0n).cbz      # output file (tags from source archives)
 ```
 
 ## Output Format
@@ -61,9 +61,9 @@ Transmetropolitan - Volume 03.cbz # output file
 Pages inside the CBZ are named sequentially:
 
 ```
-Chainsaw Man - Volume 24 - p000.png   # cover
-Chainsaw Man - Volume 24 - p001.jpg   # first page of first chapter/issue
-Chainsaw Man - Volume 24 - p002.jpg
+Chainsaw Man v24 - p000.png   # cover
+Chainsaw Man v24 - p001.jpg   # first page of first chapter/issue
+Chainsaw Man v24 - p002.jpg
 ...
 ```
 

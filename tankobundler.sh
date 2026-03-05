@@ -5,10 +5,11 @@
 #
 # Each folder should contain:
 #   - Individual CBZ and/or CBR files (chapters, issues, etc.)
-#   - Optionally, a cover image (jpg/png/webp) — any lone image file in the folder
+#   - Optionally, a cover image (jpg/png/webp) — any loose image file in the folder
 #     is treated as the cover and placed first (p000)
 #
-# The output CBZ is named after the folder and placed alongside it.
+# The output CBZ is named after the folder, with tags extracted from the source
+# archive filenames (e.g. Digital, group name) appended automatically.
 # Internal pages are named: {folder name} - p000.ext, p001.ext, ...
 #
 # Examples:
@@ -39,6 +40,17 @@ extract_archive() {
     esac
 }
 
+# Extract parenthesized tags from a filename, skipping year-only tags
+extract_tags() {
+    local filename="$1"
+    basename "$filename" | grep -oP '\([^)]+\)' | while read -r tag; do
+        # Skip pure year tags like (2024)
+        if [[ ! "$tag" =~ ^\([0-9]{4}\)$ ]]; then
+            printf "%s " "$tag"
+        fi
+    done | sed 's/ $//'
+}
+
 for VOLDIR_ARG in "$@"; do
     # Strip trailing slash and resolve to absolute path
     VOLDIR="$(cd "$(dirname "${VOLDIR_ARG%/}")" && pwd)/$(basename "${VOLDIR_ARG%/}")"
@@ -49,7 +61,22 @@ for VOLDIR_ARG in "$@"; do
     fi
 
     VOLNAME="$(basename "$VOLDIR")"
-    OUTFILE="$(cd "$(dirname "$VOLDIR")" && pwd)/${VOLNAME}.cbz"
+
+    # Extract tags from first source archive
+    FIRST_ARCHIVE=$(find "$VOLDIR" -maxdepth 1 -type f \( -iname '*.cbz' -o -iname '*.cbr' \) | sort | head -1)
+    TAGS=""
+    if [[ -n "$FIRST_ARCHIVE" ]]; then
+        TAGS=$(extract_tags "$FIRST_ARCHIVE")
+    fi
+
+    # Build output filename with tags
+    if [[ -n "$TAGS" ]]; then
+        OUTNAME="${VOLNAME} ${TAGS}"
+    else
+        OUTNAME="${VOLNAME}"
+    fi
+
+    OUTFILE="$(cd "$(dirname "$VOLDIR")" && pwd)/${OUTNAME}.cbz"
     WORKDIR="$TMPDIR/$VOLNAME"
     mkdir -p "$WORKDIR"
 
