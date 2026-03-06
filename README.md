@@ -1,6 +1,6 @@
 # tankobundler
 
-Combines individual CBZ + CBR files (chapters, issues, etc.) into a single volume / tankōbon in CBZ format.
+Combines individual CBZ + CBR files (chapters, issues, etc.) into a single volume / tankōbon in CBZ format, with ComicInfo.xml metadata.
 
 ## Requirements
 
@@ -39,17 +39,17 @@ Archives and images are processed in alphabetical order. Cover images always com
 ## Usage
 
 ```bash
-# Single volume
-./tankobundler.sh "Chainsaw Man v24"
+# Single manga volume
+./tankobundler.sh --manga "Chainsaw Man v24"
 
 # Multiple volumes
 ./tankobundler.sh "Transmetropolitan v03" "Transmetropolitan v04"
 
 # All subfolders
-./tankobundler.sh */
+./tankobundler.sh --manga */
 
 # Flat mode (sequential page numbering, no chapter subfolders)
-./tankobundler.sh --flat "Chainsaw Man v24"
+./tankobundler.sh --flat --manga "Chainsaw Man v24"
 ```
 
 The output CBZ is named after the folder, with tags (e.g. `(Digital)`, group name) automatically extracted from the source archive filenames and appended:
@@ -59,14 +59,22 @@ Chainsaw Man v24/                          # input folder
 Chainsaw Man v24 (Digital) (1r0n).cbz      # output file (tags from source archives)
 ```
 
+## Options
+
+| Flag | Description |
+|------|-------------|
+| `--manga` | Marks output as manga in ComicInfo.xml (right-to-left reading, black & white) |
+| `--flat` | Flattens all pages into sequential numbering (`p000`, `p001`, ...) instead of chapter subfolders |
+
 ## Output Format
 
 By default, each source archive becomes a chapter subfolder inside the CBZ, preserving chapter boundaries:
 
 ```
 Chainsaw Man v24 (Digital) (1r0n).cbz
-├── cover.png                    # cover image at root
-├── Chainsaw Man 223/            # chapter subfolder
+├── ComicInfo.xml                    # metadata (series, volume, cover, etc.)
+├── cover.png                               # cover image
+├── Chainsaw Man 223/                # chapter subfolder
 │   ├── 01.jpg
 │   ├── 02.jpg
 │   └── ...
@@ -90,6 +98,24 @@ Chainsaw Man v24 - p001.jpg   # first page of first chapter
 Chainsaw Man v24 - p002.jpg
 ...
 ```
+
+## ComicInfo.xml
+
+Each output CBZ includes a [ComicInfo.xml](https://anansi-project.github.io/docs/comicinfo/intro) with metadata auto-populated from the folder and archive names:
+
+| Field | Source |
+|-------|--------|
+| `Series` | Parsed from folder name (e.g. "Chainsaw Man" from "Chainsaw Man v24") |
+| `Number` | Volume number from folder name |
+| `Title` | "Vol. X" |
+| `Year` | Year tag from source archive filename, e.g. `(2024)` |
+| `PageCount` | Total images in the volume |
+| `Manga` | Set when `--manga` flag is used |
+| `BlackAndWhite` | Set when `--manga` flag is used |
+| `LanguageISO` | `en` |
+| `Pages` | Cover marked as `FrontCover` |
+
+This metadata is recognized by readers like Komga, Kavita, Tachiyomi/Mihon, and others.
 
 ## Notes
 
