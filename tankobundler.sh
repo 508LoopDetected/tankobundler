@@ -86,7 +86,7 @@ for VOLDIR_ARG in "$@"; do
     COVERS=()
     while IFS= read -r -d '' IMG; do
         COVERS+=("$IMG")
-    done < <(find "$VOLDIR" -maxdepth 1 -type f \( -iname '*.jpg' -o -iname '*.jpeg' -o -iname '*.png' -o -iname '*.webp' \) -print0 | sort -z)
+    done < <(find "$VOLDIR" -maxdepth 1 -type f \( -iname '*.jpg' -o -iname '*.jpeg' -o -iname '*.png' -o -iname '*.webp' -o -iname '*.avif' -o -iname '*.gif' -o -iname '*.bmp' -o -iname '*.tiff' \) -print0 | sort -z)
 
     if [[ ${#COVERS[@]} -gt 0 ]]; then
         for COVER in "${COVERS[@]}"; do
@@ -113,7 +113,7 @@ for VOLDIR_ARG in "$@"; do
             PNUM=$(printf "%03d" $PAGE)
             cp "$IMG" "$WORKDIR/${VOLNAME} - p${PNUM}.${IMGEXT}"
             PAGE=$((PAGE + 1))
-        done < <(find "$CHDIR" -type f \( -iname '*.jpg' -o -iname '*.jpeg' -o -iname '*.png' -o -iname '*.webp' \) | sort)
+        done < <(find "$CHDIR" -type f \( -iname '*.jpg' -o -iname '*.jpeg' -o -iname '*.png' -o -iname '*.webp' -o -iname '*.avif' -o -iname '*.gif' -o -iname '*.bmp' -o -iname '*.tiff' \) | sort)
 
         rm -rf "$CHDIR"
         ARCHIVE_COUNT=$((ARCHIVE_COUNT + 1))
