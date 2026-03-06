@@ -47,6 +47,9 @@ Archives and images are processed in alphabetical order. Cover images always com
 
 # All subfolders
 ./tankobundler.sh */
+
+# Flat mode (sequential page numbering, no chapter subfolders)
+./tankobundler.sh --flat "Chainsaw Man v24"
 ```
 
 The output CBZ is named after the folder, with tags (e.g. `(Digital)`, group name) automatically extracted from the source archive filenames and appended:
@@ -58,13 +61,36 @@ Chainsaw Man v24 (Digital) (1r0n).cbz      # output file (tags from source archi
 
 ## Output Format
 
-Pages inside the CBZ are named sequentially:
+By default, each source archive becomes a chapter subfolder inside the CBZ, preserving chapter boundaries:
+
+```
+Chainsaw Man v24 (Digital) (1r0n).cbz
+├── cover.png                    # cover image at root
+├── Chainsaw Man 223/            # chapter subfolder
+│   ├── 01.jpg
+│   ├── 02.jpg
+│   └── ...
+├── Chainsaw Man 224/
+│   ├── 01.jpg
+│   └── ...
+└── Chainsaw Man 225/
+    ├── 01.jpg
+    └── ...
+```
+
+Chapter subfolder names are derived from the source archive filename (minus tags and extension).
+
+### Flat mode (`--flat`)
+
+With `--flat`, all pages are extracted into a single flat sequence:
 
 ```
 Chainsaw Man v24 - p000.png   # cover
-Chainsaw Man v24 - p001.jpg   # first page of first chapter/issue
+Chainsaw Man v24 - p001.jpg   # first page of first chapter
 Chainsaw Man v24 - p002.jpg
 ...
 ```
+
+## Notes
 
 Images are stored uncompressed (zip `-0`) since jpg/png are already compressed. This keeps the file fast to read without inflating its size.

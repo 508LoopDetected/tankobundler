@@ -1,27 +1,39 @@
 #!/bin/bash
 # Combines individual CBZ/CBR files + an optional cover image into a single volume CBZ.
 #
-# Usage: ./tankobundler.sh <folder> [folder...]
+# Usage: ./tankobundler.sh [--flat] <folder> [folder...]
 #
 # Each folder should contain:
 #   - Individual CBZ and/or CBR files (chapters, issues, etc.)
 #   - Optionally, a cover image (jpg/png/webp) — any loose image file in the folder
-#     is treated as the cover and placed first (p000)
+#     is treated as the cover and placed first
+#
+# By default, each source archive becomes a subfolder inside the output CBZ,
+# preserving chapter boundaries. Use --flat for sequential page numbering instead.
 #
 # The output CBZ is named after the folder, with tags extracted from the source
 # archive filenames (e.g. Digital, group name) appended automatically.
-# Internal pages are named: {folder name} - p000.ext, p001.ext, ...
 #
 # Examples:
-#   ./tankobundler.sh "Chainsaw Man - Volume 24"
-#   ./tankobundler.sh "Transmetropolitan - Volume 03"
+#   ./tankobundler.sh "Chainsaw Man v24"
+#   ./tankobundler.sh --flat "Transmetropolitan v03"
 #   ./tankobundler.sh */   # all subfolders
 
 set -e
 
+FLAT=0
+if [[ "$1" == "--flat" ]]; then
+    FLAT=1
+    shift
+fi
+
 if [[ $# -eq 0 ]]; then
-    echo "Usage: $0 <folder> [folder...]"
+    echo "Usage: $0 [--flat] <folder> [folder...]"
     echo "Combines CBZ/CBR files in each folder into a single volume CBZ."
+    echo ""
+    echo "Options:"
+    echo "  --flat    Flatten all pages into sequential numbering (p000, p001, ...)"
+    echo "           Default: preserve chapter subfolders"
     exit 1
 fi
 
@@ -49,6 +61,19 @@ extract_tags() {
             printf "%s " "$tag"
         fi
     done | sed 's/ $//'
+}
+
+# Derive a chapter folder name from an archive filename
+# e.g. "Chainsaw Man 223 (2025) (Digital) (1r0n).cbz" -> "Chainsaw Man 223"
+chapter_name() {
+    local filename
+    filename="$(basename "$1")"
+    # Strip extension
+    filename="${filename%.*}"
+    # Strip parenthesized tags
+    filename="$(echo "$filename" | sed 's/ *([^)]*)//g')"
+    # Trim trailing whitespace
+    echo "$filename" | sed 's/ *$//'
 }
 
 for VOLDIR_ARG in "$@"; do
@@ -81,6 +106,7 @@ for VOLDIR_ARG in "$@"; do
     mkdir -p "$WORKDIR"
 
     PAGE=0
+    TOTAL_IMAGES=0
 
     # Find cover image (loose image files in folder, not inside archives)
     COVERS=()
@@ -91,9 +117,16 @@ for VOLDIR_ARG in "$@"; do
     if [[ ${#COVERS[@]} -gt 0 ]]; then
         for COVER in "${COVERS[@]}"; do
             EXT="${COVER##*.}"
-            PNUM=$(printf "%03d" $PAGE)
-            cp "$COVER" "$WORKDIR/${VOLNAME} - p${PNUM}.${EXT}"
+            if [[ $FLAT -eq 1 ]]; then
+                PNUM=$(printf "%03d" $PAGE)
+                cp "$COVER" "$WORKDIR/${VOLNAME} - p${PNUM}.${EXT}"
+            else
+                # Cover goes at root level of archive
+                COVERNAME="$(basename "$COVER")"
+                cp "$COVER" "$WORKDIR/${COVERNAME}"
+            fi
             PAGE=$((PAGE + 1))
+            TOTAL_IMAGES=$((TOTAL_IMAGES + 1))
         done
     fi
 
@@ -108,28 +141,43 @@ for VOLDIR_ARG in "$@"; do
             continue
         fi
 
-        while IFS= read -r IMG; do
-            IMGEXT="${IMG##*.}"
-            PNUM=$(printf "%03d" $PAGE)
-            cp "$IMG" "$WORKDIR/${VOLNAME} - p${PNUM}.${IMGEXT}"
-            PAGE=$((PAGE + 1))
-        done < <(find "$CHDIR" -type f \( -iname '*.jpg' -o -iname '*.jpeg' -o -iname '*.png' -o -iname '*.webp' -o -iname '*.avif' -o -iname '*.gif' -o -iname '*.bmp' -o -iname '*.tiff' \) | sort)
+        if [[ $FLAT -eq 1 ]]; then
+            # Flat mode: sequential page numbering
+            while IFS= read -r IMG; do
+                IMGEXT="${IMG##*.}"
+                PNUM=$(printf "%03d" $PAGE)
+                cp "$IMG" "$WORKDIR/${VOLNAME} - p${PNUM}.${IMGEXT}"
+                PAGE=$((PAGE + 1))
+                TOTAL_IMAGES=$((TOTAL_IMAGES + 1))
+            done < <(find "$CHDIR" -type f \( -iname '*.jpg' -o -iname '*.jpeg' -o -iname '*.png' -o -iname '*.webp' -o -iname '*.avif' -o -iname '*.gif' -o -iname '*.bmp' -o -iname '*.tiff' \) | sort)
+        else
+            # Chapter mode: each archive becomes a subfolder
+            CHNAME="$(chapter_name "$ARCHIVE")"
+            CHWORKDIR="$WORKDIR/$CHNAME"
+            mkdir -p "$CHWORKDIR"
+
+            while IFS= read -r IMG; do
+                IMGNAME="$(basename "$IMG")"
+                cp "$IMG" "$CHWORKDIR/${IMGNAME}"
+                TOTAL_IMAGES=$((TOTAL_IMAGES + 1))
+            done < <(find "$CHDIR" -type f \( -iname '*.jpg' -o -iname '*.jpeg' -o -iname '*.png' -o -iname '*.webp' -o -iname '*.avif' -o -iname '*.gif' -o -iname '*.bmp' -o -iname '*.tiff' \) | sort)
+        fi
 
         rm -rf "$CHDIR"
         ARCHIVE_COUNT=$((ARCHIVE_COUNT + 1))
     done < <(find "$VOLDIR" -maxdepth 1 -type f \( -iname '*.cbz' -o -iname '*.cbr' \) -print0 | sort -z)
 
-    if [[ $PAGE -eq 0 ]]; then
+    if [[ $TOTAL_IMAGES -eq 0 ]]; then
         echo "SKIP: No images or archives found in $VOLDIR"
         rm -rf "$WORKDIR"
         continue
     fi
 
     cd "$WORKDIR"
-    find . -maxdepth 1 -type f -print0 | sort -z | xargs -0 zip -q -0 "$OUTFILE"
+    find . -type f -print0 | sort -z | xargs -0 zip -q -0 "$OUTFILE"
     cd "$ORIGDIR"
 
-    echo "$VOLNAME: $PAGE pages from $ARCHIVE_COUNT archives -> $(basename "$OUTFILE")"
+    echo "$VOLNAME: $TOTAL_IMAGES pages from $ARCHIVE_COUNT archives -> $(basename "$OUTFILE")"
     rm -rf "$WORKDIR"
 done
 
